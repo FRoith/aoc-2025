@@ -1,4 +1,6 @@
-use highs::{ColProblem, HighsModelStatus, Row, Sense};
+use good_lp::{
+    Expression, ProblemVariables, Solution, SolverModel, Variable, default_solver, variable,
+};
 use std::{str::FromStr, vec};
 
 advent_of_code::solution!(10);
@@ -123,12 +125,10 @@ impl LightPuzzle {
         for mask in 0..(1u64 << free_vars.len()) {
             let mut solution = vec![0u8; num_buttons];
 
-            // Set free variables
             for (bit, &var) in free_vars.iter().enumerate() {
                 solution[var] = ((mask >> bit) & 1) as u8;
             }
 
-            // Back-substitute for pivot variables
             for &(row, col) in pivot_cols.iter().rev() {
                 let mut sum = matrix[row][num_buttons];
                 for c in (col + 1)..num_buttons {
@@ -143,30 +143,38 @@ impl LightPuzzle {
 
         min_presses
     }
+
     fn find_optimal_solution_joltages(&self) -> u64 {
-        let mut problem = ColProblem::new();
-        let rows: Vec<Row> = self
-            .joltages
-            .iter()
-            .map(|&j| problem.add_row(j as f64..=j as f64))
+        let mut vars = ProblemVariables::new();
+
+        let buttons: Vec<Variable> = (0..self.buttons.len())
+            .map(|_| vars.add(variable().integer().min(0).max(1000)))
             .collect();
 
-        for i in 0..self.buttons.len() {
-            let factors: Vec<(Row, f64)> = self.buttons[i]
-                .light_indices
+        let mut problem = vars
+            .minimise(buttons.iter().sum::<Expression>())
+            .using(default_solver);
+
+        for (light_idx, &target_joltage) in self.joltages.iter().enumerate() {
+            // Find which buttons affect this light
+            let constraint: Expression = self
+                .buttons
                 .iter()
-                .map(|&light_idx| (rows[light_idx], 1.0))
-                .collect();
-            problem.add_integer_column(1., 0..=1000, factors);
+                .enumerate()
+                .filter(|(_, btn)| btn.light_indices.contains(&light_idx))
+                .map(|(btn_idx, _)| buttons[btn_idx])
+                .sum();
+
+            problem = problem.with(constraint.eq(target_joltage as f64));
         }
 
-        let solved = problem.clone().optimise(Sense::Minimise).solve();
+        // Solve
+        let solution = problem.solve().unwrap();
 
-        assert!(solved.status() == HighsModelStatus::Optimal);
-
-        solved.get_solution().columns()[..self.buttons.len()]
+        // Sum up the button presses
+        buttons
             .iter()
-            .map(|v| v.round() as u64)
+            .map(|&var| solution.value(var).round() as u64)
             .sum()
     }
 }
