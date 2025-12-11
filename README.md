@@ -41,3 +41,4 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 
 **Total: 219.51ms**
 <!--- benchmarking table --->
+Benchmarks were run on my laptop, times are measured with the [dhat](https://crates.io/crates/dhat) crate
