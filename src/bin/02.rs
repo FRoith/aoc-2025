@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 advent_of_code::solution!(2);
 
@@ -14,31 +14,42 @@ impl Range {
     }
 
     fn get_all_repeating(&self) -> Vec<usize> {
-        let mut repeating = vec![];
-        for i in self.start..=self.end {
-            let s = i.to_string();
-            let l = s.len();
-            if l % 2 == 0 && s[..l / 2] == s[l / 2..] {
-                repeating.push(i);
-            }
-        }
-        repeating
+        (self.start.ilog10() + 1..=self.end.ilog10() + 1)
+            .filter(|n| n.is_multiple_of(2))
+            .flat_map(|n| {
+                (10_usize.pow((n / 2) - 1)..10_usize.pow(n / 2)).filter_map(move |m| {
+                    let v = m * (10_usize.pow(n / 2) + 1);
+                    if self.start <= v && v <= self.end {
+                        Some(v)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect()
     }
 
-    fn get_smore_repeating(&self) -> Vec<usize> {
-        let mut repeating = vec![];
-        for i in self.start..=self.end {
-            let s = i.to_string();
-            let l = s.len();
-            // find all strings which only consist of repeating patterns
-            for j in 1..=l / 2 {
-                if l % j == 0 && (j..=(l - j)).step_by(j).all(|n| s[0..j] == s[n..n + j]) {
-                    repeating.push(i);
-                    break;
-                }
-            }
-        }
-        repeating
+    fn get_smore_repeating(&self) -> HashSet<usize> {
+        (self.start.ilog10() + 1..=self.end.ilog10() + 1)
+            .flat_map(|nn| {
+                (2..=nn)
+                    .filter(move |&n| nn.is_multiple_of(n))
+                    .flat_map(move |n| {
+                        (10_usize.pow((nn / n) - 1)..10_usize.pow(nn / n)).filter_map(move |m| {
+                            let mut v = m;
+                            for _ in 1..n {
+                                v *= 10_usize.pow(nn / n);
+                                v += m;
+                            }
+                            if self.start <= v && v <= self.end {
+                                Some(v)
+                            } else {
+                                None
+                            }
+                        })
+                    })
+            })
+            .collect()
     }
 }
 
@@ -91,11 +102,15 @@ mod tests {
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(1227775554));
+        let result = part_one(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(18700015741));
     }
 
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(4174379265));
+        let result = part_two(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(20077272987));
     }
 }
