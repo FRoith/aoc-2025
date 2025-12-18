@@ -1,4 +1,3 @@
-use ndarray::{Array2, arr2, s};
 use std::collections::HashSet;
 
 advent_of_code::solution!(4);
@@ -8,7 +7,7 @@ struct RollMap {
     h: usize,
     w: usize,
     rolls: HashSet<(usize, usize)>,
-    map: Array2<u8>,
+    map: Vec<Vec<u8>>,
 }
 
 impl RollMap {
@@ -17,17 +16,19 @@ impl RollMap {
         let lines: Vec<&str> = input.trim().lines().map(|l| l.trim()).collect();
         let h: usize = lines.len();
         let w: usize = lines[0].len();
-        let mut map = Array2::from_elem((h, w), 0);
+        let mut map: Vec<Vec<u8>> = (0..h).map(|_| (0..w).map(|_| 0).collect()).collect();
         for (y, line) in lines.iter().enumerate() {
             for (x, c) in line.chars().enumerate() {
                 if c == '@' {
                     rolls.insert((x, y));
 
-                    let mut sl = map.slice_mut(s![
-                        y.saturating_sub(1)..=(y + 1).min(h - 1),
-                        x.saturating_sub(1)..=(x + 1).min(w - 1)
-                    ]);
-                    sl.iter_mut().for_each(|v| *v += 1);
+                    map[y.saturating_sub(1)..=(y + 1).min(h - 1)]
+                        .iter_mut()
+                        .for_each(|l| {
+                            l[x.saturating_sub(1)..=(x + 1).min(w - 1)]
+                                .iter_mut()
+                                .for_each(|v| *v += 1)
+                        });
                 }
             }
         }
@@ -36,19 +37,20 @@ impl RollMap {
 
     fn clear_rolls(&mut self, max_neighbors: u8) -> usize {
         let l = self.rolls.len();
-        let orig_map = self.map.clone();
         self.rolls = self
             .rolls
             .iter()
             .filter_map(|&(x, y)| {
-                if *orig_map.get((y, x)).unwrap() > max_neighbors {
+                if self.map[y][x] > max_neighbors {
                     Some((x, y))
                 } else {
-                    let mut sl = self.map.slice_mut(s![
-                        y.saturating_sub(1)..=(y + 1).min(self.h - 1),
-                        x.saturating_sub(1)..=(x + 1).min(self.w - 1)
-                    ]);
-                    sl.iter_mut().for_each(|v| *v -= 1);
+                    self.map[y.saturating_sub(1)..=(y + 1).min(self.h - 1)]
+                        .iter_mut()
+                        .for_each(|l| {
+                            l[x.saturating_sub(1)..=(x + 1).min(self.w - 1)]
+                                .iter_mut()
+                                .for_each(|v| *v = v.saturating_sub(1))
+                        });
                     None
                 }
             })
