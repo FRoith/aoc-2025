@@ -1,16 +1,12 @@
-use petgraph::{
-    algo::{connected_components, has_path_connecting, scc::kosaraju_scc},
-    graph::UnGraph,
-};
 use std::str::FromStr;
 
 advent_of_code::solution!(8);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct JunctionBox {
-    x: u64,
-    y: u64,
-    z: u64,
+    x: i64,
+    y: i64,
+    z: i64,
 }
 
 impl FromStr for JunctionBox {
@@ -27,31 +23,29 @@ impl FromStr for JunctionBox {
 
 impl JunctionBox {
     fn sq_distance(&self, other: &JunctionBox) -> u64 {
-        ((self.x as i64 - other.x as i64).pow(2)
-            + (self.y as i64 - other.y as i64).pow(2)
-            + (self.z as i64 - other.z as i64).pow(2)) as u64
+        ((self.x - other.x).pow(2) + (self.y - other.y).pow(2) + (self.z - other.z).pow(2)) as u64
     }
 }
 
 struct Connections {
-    graph: UnGraph<u32, ()>,
-    last_connection: Option<(JunctionBox, JunctionBox)>,
+    junctions: Vec<JunctionBox>,
+    graph: Vec<Vec<usize>>,
+    last_connection: Option<(usize, usize)>,
 }
 
 impl Connections {
     fn new(junctions: Vec<JunctionBox>, n_: Option<usize>) -> Self {
-        let mut connections = Vec::new();
-        let mut graph = UnGraph::<u32, ()>::new_undirected();
+        let mut connections: Vec<((usize, usize), u64)> = Vec::new();
+        let mut graph = Vec::new();
         let mut last_connection = None;
+        let nnodes = junctions.len();
 
-        for i in 0..junctions.len() {
-            for j in i + 1..junctions.len() {
-                connections.push((
-                    (i as u32, j as u32),
-                    junctions[i].sq_distance(&junctions[j]),
-                ));
+        for i in 0..nnodes {
+            for j in i + 1..nnodes {
+                connections.push(((i, j), junctions[i].sq_distance(&junctions[j])));
             }
-            graph.add_node(1);
+            graph.push(Vec::new());
+            graph[i].push(i);
         }
         let n = if let Some(n__) = n_ {
             n__
@@ -60,28 +54,33 @@ impl Connections {
         };
         connections.sort_by(|a, b| a.1.cmp(&b.1));
         for ((a_, b_), _) in connections[0..n].iter() {
-            let a = (*a_).into();
-            let b = (*b_).into();
-            if !has_path_connecting(&graph, b, a, None) {
-                graph.add_edge(a, b, ());
+            let mut aa = graph
+                .extract_if(0..graph.len(), |hs| hs.contains(a_))
+                .next()
+                .unwrap();
+            if let Some(bb) = graph
+                .extract_if(0..graph.len(), |hs| hs.contains(b_))
+                .next()
+            {
+                aa.extend(bb);
             }
-            if connected_components(&graph) == 1 {
-                last_connection =
-                    Some((junctions[a.index()].clone(), junctions[b.index()].clone()));
+            graph.push(aa);
+            if graph.len() == 1 {
+                last_connection = Some((*a_, *b_));
                 break;
             }
         }
 
         Self {
+            junctions,
             graph,
             last_connection,
         }
     }
 
-    fn get_num_circuits(&self) -> u64 {
-        let mut sgs = kosaraju_scc(&self.graph);
-        sgs.sort_by_key(|g| std::cmp::Reverse(g.len()));
-        sgs[0].len() as u64 * sgs[1].len() as u64 * sgs[2].len() as u64
+    fn get_num_circuits(&mut self) -> u64 {
+        self.graph.sort_by_key(|g| std::cmp::Reverse(g.len()));
+        self.graph[0].len() as u64 * self.graph[1].len() as u64 * self.graph[2].len() as u64
     }
 }
 
@@ -92,7 +91,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         .map(|line| line.parse::<JunctionBox>().unwrap())
         .collect();
     let n = if junctions.len() < 1000 { 10 } else { 1000 };
-    let connections = Connections::new(junctions, Some(n));
+    let mut connections = Connections::new(junctions, Some(n));
 
     Some(connections.get_num_circuits())
 }
@@ -104,10 +103,9 @@ pub fn part_two(input: &str) -> Option<u64> {
         .map(|line| line.parse::<JunctionBox>().unwrap())
         .collect();
     let connections = Connections::new(junctions, None);
-
     let (j1, j2) = connections.last_connection.unwrap();
 
-    Some(j1.x * j2.x)
+    Some(connections.junctions[j1].x as u64 * connections.junctions[j2].x as u64)
 }
 
 #[cfg(test)]

@@ -35,12 +35,12 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 | [Day 5](./src/bin/05.rs) | `56.0µs` | `53.4µs` |
 | [Day 6](./src/bin/06.rs) | `75.6µs` | `484.3µs` |
 | [Day 7](./src/bin/07.rs) | `560.3µs` | `672.3µs` |
-| [Day 8](./src/bin/08.rs) | `16.9ms` | `45.9ms` |
+| [Day 8](./src/bin/08.rs) | `13.3ms` | `13.6ms` |
 | [Day 9](./src/bin/09.rs) | `101.5µs` | `29.5ms` |
 | [Day 10](./src/bin/10.rs) | `372.1µs` | `8.5ms` |
 | [Day 11](./src/bin/11.rs) | `177.8µs` | `711.9µs` |
 | [Day 12](./src/bin/12.rs) | `190.5µs` | `-` |
 
-**Total: 106.11ms**
+**Total: 70.21ms**
 <!--- benchmarking table --->
 Benchmarks were run on my laptop, times are measured with the [dhat](https://crates.io/crates/dhat) crate
